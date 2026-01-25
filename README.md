@@ -1,47 +1,65 @@
-﻿# Zurku Gravestones
+# Zurku Gravestones
 
-A Hytale mod that spawns gravestones when players die. Items are stored in the gravestone so you can retrieve them.
+A Hytale mod that spawns a gravestone when you die. Your items are stored inside so you can retrieve them.
 
-Works with any death penalty setting (none/all/percentage).
+Compatible with any death penalty setting (none / all / percentage).
 
 ## Features
 
-- Gravestone spawns at death location with your items
-- Custom or vanilla tombstone model
-- Configurable despawn timer
-- Per-player gravestone limit
-- Owner protection (optional)
-- Persistence across server restarts
+- **Gravestone spawning** – A gravestone appears at your death location containing your items
+- **Item retrieval** – Right-click the gravestone to collect your items
+- **Despawn timer** – Optionally remove old gravestones after a set time
+- **Per-player limit** – Limit how many gravestones each player can have (oldest removed first)
+- **Owner protection** – Only the owner can break/collect from their gravestone
+- **Custom model** – Includes a custom gravestone model (toggle to vanilla if preferred)
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `/gravestone` | Show all settings and commands |
-| `/gsmodel` | Toggle between custom/vanilla model |
-| `/gstimer <minutes>` | Set despawn timer (0 = disabled) |
-| `/gslimit <count>` | Set max gravestones per player (0 = unlimited) |
-| `/gsprotection` | Toggle owner-only access |
+| `/gs timer <minutes>` | Set despawn timer (0 = never) |
+| `/gs limit <count>` | Set max gravestones per player (0 = unlimited) |
+| `/gs protection <on\|off>` | Toggle owner-only protection |
+| `/gs model` | Toggle between custom and vanilla gravestone model |
 
-All commands require OP permissions.
+## Configuration
 
-## Install
+Settings are stored in `plugins/Gravestones/settings.json`:
 
-Drop the jar in `UserData/Mods/` folder.
+```json
+{
+  "settingsVersion": 2,
+  "useVanillaModel": false,
+  "despawnMinutes": 0,
+  "maxPerPlayer": 0,
+  "ownerProtection": false
+}
+```
 
-## Building
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `useVanillaModel` | `false` | Use vanilla tombstone model instead of custom |
+| `despawnMinutes` | `0` | Minutes until gravestones despawn (0 = never) |
+| `maxPerPlayer` | `0` | Max gravestones per player (0 = unlimited) |
+| `ownerProtection` | `false` | Only owner can break/collect |
 
-Requires Java 21+
+## Installation
+
+1. Download the latest JAR from [Releases](../../releases)
+2. Place it in `UserData/Mods/`
+3. Start the game
+
+## Building from Source
 
 ```bash
 ./gradlew build
 ```
 
-Output: `build/libs/GravestonePlugin-x.x.x.jar`
+Output: `build/libs/GravestonePlugin-*.jar`
 
 ## Contributing
 
-Pull requests welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 
