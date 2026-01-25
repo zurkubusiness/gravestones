@@ -1,0 +1,32 @@
+{
+  "Parent": "Furniture_Village_Tombstone",
+  "TranslationProperties": {
+    "Name": "Vanilla Gravestone",
+    "Description": "Contains the belongings of a fallen adventurer."
+  },
+  "BlockType": {
+    "Support": {},
+    "Gathering": {
+      "Breaking": {
+        "GatherType": "Rocks",
+        "Quantity": 0
+      }
+    },
+    "Interactions": {
+      "Primary": "Break_Gravestone",
+      "Use": "Collect_Gravestone"
+    },
+    "State": {
+      "Id": "container",
+      "Capacity": 72,
+      "Definitions": {
+        "OpenWindow": {
+          "InteractionSoundEventId": "SFX_Chest_Wooden_Open"
+        },
+        "CloseWindow": {
+          "InteractionSoundEventId": "SFX_Chest_Wooden_Close"
+        }
+      }
+    }
+  }
+}

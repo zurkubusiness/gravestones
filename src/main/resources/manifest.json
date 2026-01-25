@@ -1,0 +1,18 @@
+{
+  "Group": "Zurku",
+  "Name": "Gravestones",
+  "Version": "${version}",
+  "Description": "Spawns gravestones containing player items on death",
+  "Authors": [
+    {
+      "Name": "Zurku",
+      "Email": "zurkubusiness@gmail.com"
+    }
+  ],
+  "Main": "zurku.gravestones.GravestonePlugin",
+  "ServerVersion": "*",
+  "Dependencies": {},
+  "OptionalDependencies": {},
+  "DisabledByDefault": false,
+  "IncludesAssetPack": true
+}
