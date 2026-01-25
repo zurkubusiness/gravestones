@@ -51,6 +51,8 @@ Settings are stored in `plugins/Gravestones/settings.json`:
 
 ## Building from Source
 
+You must provide `libs/hytale-server.jar` yourself (not included for legal reasons).
+
 ```bash
 ./gradlew build
 ```

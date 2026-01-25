@@ -8,6 +8,7 @@ build/
 
 # Server testing directory
 run/
+libs/
 
 # IntelliJ IDEA
 .idea/
