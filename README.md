@@ -62,16 +62,3 @@ Output: `build/libs/GravestonePlugin-*.jar`
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-## License
-Copyright (c) 2026 Zurku  
-All Rights Reserved.
-
-This mod is provided for personal use, study, and contribution via pull requests only.  
-You may view, fork (on GitHub), and clone the repository.
-
-However, you may not redistribute, republish, modify for public release, or claim this work as your own without explicit written permission from Zurku.
-
-Bug fixes or improvements are welcome as pull requests to this repository.
-
-See the [LICENSE](LICENSE) file for details.
