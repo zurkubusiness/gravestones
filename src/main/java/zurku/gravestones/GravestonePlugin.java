@@ -14,16 +14,26 @@ import zurku.gravestones.commands.GsLimitCommand;
 import zurku.gravestones.commands.GsModelCommand;
 import zurku.gravestones.commands.GsProtectionCommand;
 import zurku.gravestones.commands.GsTimerCommand;
+import zurku.gravestones.event.GravestoneBrokenEvent;
+import com.hypixel.hytale.server.core.HytaleServer;
+import com.hypixel.hytale.event.IEventDispatcher;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.util.List;
+import java.util.UUID;
 import javax.annotation.Nonnull;
 
 @SuppressWarnings({"unchecked", "rawtypes"})
 public class GravestonePlugin extends JavaPlugin {
 
+    private static GravestonePlugin instance;
+
     private GravestoneManager gravestoneManager;
     private GravestoneSettings settings;
+
+    public static GravestonePlugin getInstance() {
+        return instance;
+    }
 
     public GravestonePlugin(@Nonnull JavaPluginInit init) {
         super(init);
@@ -31,6 +41,7 @@ public class GravestonePlugin extends JavaPlugin {
 
     @Override
     protected void setup() {
+        instance = this;
         getLogger().atInfo().log("[Gravestones] Initializing...");
         cleanupOldVersionFiles();
         
@@ -61,6 +72,7 @@ public class GravestonePlugin extends JavaPlugin {
         if (gravestoneManager != null) {
             gravestoneManager.shutdown();
         }
+        instance = null;
         getLogger().atInfo().log("[Gravestones] Shutdown");
     }
 
@@ -207,11 +219,22 @@ public class GravestonePlugin extends JavaPlugin {
             getEventRegistry().registerGlobal(BreakBlockEvent.class, event -> {
                 String id = event.getBlockType().getId();
                 if (id != null && id.contains("Gravestone")) {
-                    gravestoneManager.removeGravestoneAtPosition(
-                        event.getTargetBlock().getX(),
-                        event.getTargetBlock().getY(),
-                        event.getTargetBlock().getZ()
-                    );
+                    int bx = event.getTargetBlock().getX();
+                    int by = event.getTargetBlock().getY();
+                    int bz = event.getTargetBlock().getZ();
+
+                    // Fire broken event before removing data
+                    try {
+                        UUID ownerUuid = gravestoneManager.getGravestoneOwner(bx, by, bz);
+                        // BreakBlockEvent doesn't provide breaker or world context
+                        IEventDispatcher<GravestoneBrokenEvent, GravestoneBrokenEvent> dispatcher =
+                            HytaleServer.get().getEventBus().dispatchFor(GravestoneBrokenEvent.class);
+                        if (dispatcher.hasListener()) {
+                            dispatcher.dispatch(new GravestoneBrokenEvent(null, ownerUuid, bx, by, bz, ""));
+                        }
+                    } catch (Exception ignored2) {}
+
+                    gravestoneManager.removeGravestoneAtPosition(bx, by, bz);
                 }
             });
         } catch (Exception ignored) {

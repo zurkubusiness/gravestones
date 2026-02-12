@@ -25,6 +25,9 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.meta.BlockState;
 import com.hypixel.hytale.server.core.universe.world.meta.state.ItemContainerState;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.core.HytaleServer;
+import com.hypixel.hytale.event.IEventDispatcher;
+import zurku.gravestones.event.GravestoneCollectedEvent;
 import java.util.List;
 import java.util.UUID;
 
@@ -77,7 +80,21 @@ public class CollectGravestoneInteraction extends SimpleBlockInteraction {
             manager.registerWorld(world);
         }
 
-        if (manager != null && manager.getSettings().isOwnerProtection()) {
+        // External access checker (before built-in owner check)
+        boolean skipOwnerCheck = false;
+        if (manager != null && manager.getAccessChecker() != null) {
+            UUID owner = manager.getGravestoneOwner(pos.x, pos.y, pos.z);
+            UUIDComponent uuidComp = (UUIDComponent) store.getComponent(ref, UUIDComponent.getComponentType());
+            UUID accessorUuid = uuidComp != null ? uuidComp.getUuid() : null;
+            if (accessorUuid != null) {
+                GravestoneAccessChecker.AccessResult result = manager.getAccessChecker().canAccess(
+                        accessorUuid, owner, pos.x, pos.y, pos.z, world.getName());
+                if (result == GravestoneAccessChecker.AccessResult.DENY) return;
+                if (result == GravestoneAccessChecker.AccessResult.ALLOW) skipOwnerCheck = true;
+            }
+        }
+
+        if (!skipOwnerCheck && manager != null && manager.getSettings().isOwnerProtection()) {
             UUID owner = manager.getGravestoneOwner(pos.x, pos.y, pos.z);
             if (owner != null) {
                 UUIDComponent uuidComp = (UUIDComponent) store.getComponent(ref, UUIDComponent.getComponentType());
@@ -117,6 +134,23 @@ public class CollectGravestoneInteraction extends SimpleBlockInteraction {
                 }
             });
         }
+
+        // Fire collected event
+        try {
+            UUID collectorUuid = null;
+            UUID ownerUuid = manager != null ? manager.getGravestoneOwner(pos.x, pos.y, pos.z) : null;
+            UUIDComponent collectorComp = (UUIDComponent) store.getComponent(ref, UUIDComponent.getComponentType());
+            if (collectorComp != null) collectorUuid = collectorComp.getUuid();
+            if (collectorUuid != null) {
+                final UUID cUuid = collectorUuid;
+                final UUID oUuid = ownerUuid;
+                IEventDispatcher<GravestoneCollectedEvent, GravestoneCollectedEvent> dispatcher =
+                    HytaleServer.get().getEventBus().dispatchFor(GravestoneCollectedEvent.class);
+                if (dispatcher.hasListener()) {
+                    dispatcher.dispatch(new GravestoneCollectedEvent(cUuid, oUuid, pos.x, pos.y, pos.z, world.getName()));
+                }
+            }
+        } catch (Exception ignored) {}
 
         world.execute(() -> world.breakBlock(pos.x, pos.y, pos.z, 0));
     }
