@@ -17,11 +17,16 @@ import com.hypixel.hytale.server.core.universe.world.chunk.WorldChunk;
 import com.hypixel.hytale.server.core.universe.world.meta.BlockState;
 import com.hypixel.hytale.server.core.universe.world.meta.state.ItemContainerState;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.core.HytaleServer;
+import com.hypixel.hytale.event.IEventDispatcher;
+import zurku.gravestones.event.GravestonePreCreateEvent;
+import zurku.gravestones.event.GravestoneCreatedEvent;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -46,6 +51,7 @@ public class GravestoneManager {
     private final List<GravestoneData> pendingRemovals;
     private final ScheduledExecutorService executor;
     private World currentWorld;
+    private GravestoneAccessChecker accessChecker;
 
     public GravestoneManager(GravestonePlugin plugin, GravestoneSettings settings) {
         this.settings = settings;
@@ -134,6 +140,65 @@ public class GravestoneManager {
 
     public GravestoneSettings getSettings() {
         return settings;
+    }
+
+    public void setAccessChecker(GravestoneAccessChecker checker) {
+        this.accessChecker = checker;
+        GravestoneBlockState.setAccessChecker(checker);
+    }
+
+    public GravestoneAccessChecker getAccessChecker() {
+        return accessChecker;
+    }
+
+    /**
+     * Returns an unmodifiable copy of the given player's gravestones, or an empty list.
+     */
+    public List<GravestoneData> getPlayerGravestones(UUID playerId) {
+        List<GravestoneData> list = playerGraves.get(playerId);
+        if (list == null || list.isEmpty()) return Collections.emptyList();
+        return Collections.unmodifiableList(new ArrayList<>(list));
+    }
+
+    /**
+     * Returns the gravestone data at the exact position, or null if none exists.
+     */
+    public GravestoneData getGravestoneAt(int x, int y, int z, String worldName) {
+        String key = worldName + ":" + x + "," + y + "," + z;
+        return locationIndex.get(key);
+    }
+
+    /**
+     * Returns the count of active gravestones for the given player.
+     */
+    public int getGravestoneCount(UUID playerId) {
+        List<GravestoneData> list = playerGraves.get(playerId);
+        return list != null ? list.size() : 0;
+    }
+
+    /**
+     * Programmatically removes a gravestone: deletes data, breaks the block in-world, and saves.
+     *
+     * @return true if a gravestone was found and removed, false otherwise
+     */
+    public boolean destroyGravestone(int x, int y, int z, String worldName) {
+        String key = worldName + ":" + x + "," + y + "," + z;
+        GravestoneData data = locationIndex.remove(key);
+        if (data == null) return false;
+
+        List<GravestoneData> list = playerGraves.get(data.getPlayerId());
+        if (list != null) {
+            list.removeIf(g -> g.getLocationKey().equals(key));
+        }
+        save();
+
+        World world = worldCache.get(worldName);
+        if (world == null) world = currentWorld;
+        if (world != null && world.getName().equals(worldName)) {
+            final World targetWorld = world;
+            targetWorld.execute(() -> targetWorld.breakBlock(x, y, z, 0));
+        }
+        return true;
     }
 
     public UUID getGravestoneOwner(int x, int y, int z) {
@@ -289,14 +354,42 @@ public class GravestoneManager {
             }
             if (itemList.isEmpty()) return;
 
-            GravestoneData data = new GravestoneData(playerId, x, y, z, world.getName());
+            String worldName = world.getName();
+
+            // Fire pre-create event (cancellable)
+            try {
+                IEventDispatcher<GravestonePreCreateEvent, GravestonePreCreateEvent> preDispatcher =
+                    HytaleServer.get().getEventBus().dispatchFor(GravestonePreCreateEvent.class);
+                if (preDispatcher.hasListener()) {
+                    GravestonePreCreateEvent preEvent = preDispatcher.dispatch(
+                        new GravestonePreCreateEvent(playerId, x, y, z, worldName));
+                    if (preEvent != null && preEvent.isCancelled()) {
+                        return;
+                    }
+                }
+            } catch (Exception e) {
+                logger.atWarning().log("[Gravestones] Pre-create event error: " + e.getMessage());
+            }
+
+            GravestoneData data = new GravestoneData(playerId, x, y, z, worldName);
             playerGraves.computeIfAbsent(playerId, k -> new ArrayList<>()).add(data);
             locationIndex.put(data.getLocationKey(), data);
             save();
-            
+
             enforcePlayerLimit(playerId, world);
 
             logger.atInfo().log("[Gravestones] Created for " + playerName + " at (" + x + ", " + y + ", " + z + ")");
+
+            // Fire created event
+            try {
+                IEventDispatcher<GravestoneCreatedEvent, GravestoneCreatedEvent> createdDispatcher =
+                    HytaleServer.get().getEventBus().dispatchFor(GravestoneCreatedEvent.class);
+                if (createdDispatcher.hasListener()) {
+                    createdDispatcher.dispatch(new GravestoneCreatedEvent(playerId, x, y, z, worldName));
+                }
+            } catch (Exception e) {
+                logger.atWarning().log("[Gravestones] Created event error: " + e.getMessage());
+            }
 
             List<ItemStack> finalItems = new ArrayList<>(itemList);
             executor.schedule(() -> world.execute(() -> placeGravestone(world, x, y, z, finalItems)), 100L, TimeUnit.MILLISECONDS);
