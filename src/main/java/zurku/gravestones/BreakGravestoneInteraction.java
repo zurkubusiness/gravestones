@@ -66,7 +66,23 @@ public class BreakGravestoneInteraction extends BreakBlockInteraction {
             manager.registerWorld(world);
         }
 
-        if (manager != null && manager.getSettings().isOwnerProtection()) {
+        // External access checker (before built-in owner check)
+        boolean skipOwnerCheck = false;
+        if (manager != null && manager.getAccessChecker() != null) {
+            UUID owner = manager.getGravestoneOwner(pos.x, pos.y, pos.z);
+            Ref ref = ctx.getEntity();
+            Store store = ref.getStore();
+            UUIDComponent uuidComp = (UUIDComponent) store.getComponent(ref, UUIDComponent.getComponentType());
+            UUID accessorUuid = uuidComp != null ? uuidComp.getUuid() : null;
+            if (accessorUuid != null) {
+                GravestoneAccessChecker.AccessResult result = manager.getAccessChecker().canAccess(
+                        accessorUuid, owner, pos.x, pos.y, pos.z, world.getName());
+                if (result == GravestoneAccessChecker.AccessResult.DENY) return;
+                if (result == GravestoneAccessChecker.AccessResult.ALLOW) skipOwnerCheck = true;
+            }
+        }
+
+        if (!skipOwnerCheck && manager != null && manager.getSettings().isOwnerProtection()) {
             UUID owner = manager.getGravestoneOwner(pos.x, pos.y, pos.z);
             if (owner != null) {
                 Ref ref = ctx.getEntity();

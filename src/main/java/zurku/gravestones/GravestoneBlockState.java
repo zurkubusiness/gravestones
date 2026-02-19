@@ -30,9 +30,14 @@ public class GravestoneBlockState extends ItemContainerState
         implements ItemContainerBlockState, DestroyableBlockState, BreakValidatedBlockState {
 
     private static GravestoneSettings settings;
-    
+    private static GravestoneAccessChecker accessChecker;
+
     public static void setSettings(GravestoneSettings s) {
         settings = s;
+    }
+
+    public static void setAccessChecker(GravestoneAccessChecker checker) {
+        accessChecker = checker;
     }
 
     public static final Codec<GravestoneBlockState> CODEC = BuilderCodec.builder(
@@ -149,7 +154,21 @@ public class GravestoneBlockState extends ItemContainerState
 
     @Override
     public boolean canOpen(Ref<EntityStore> ref, ComponentAccessor<EntityStore> accessor) {
-        if (settings != null && settings.isOwnerProtection() && ownerUUID != null) {
+        boolean skipOwnerCheck = false;
+        if (accessChecker != null && ownerUUID != null) {
+            UUIDComponent uuidComp = accessor.getComponent(ref, UUIDComponent.getComponentType());
+            if (uuidComp != null) {
+                UUID playerUuid = uuidComp.getUuid();
+                var blockPos = getBlockPosition();
+                var chunk = getChunk();
+                String worldName = chunk != null && chunk.getWorld() != null ? chunk.getWorld().getName() : "";
+                GravestoneAccessChecker.AccessResult result = accessChecker.canAccess(
+                        playerUuid, ownerUUID, blockPos.getX(), blockPos.getY(), blockPos.getZ(), worldName);
+                if (result == GravestoneAccessChecker.AccessResult.DENY) return false;
+                if (result == GravestoneAccessChecker.AccessResult.ALLOW) skipOwnerCheck = true;
+            }
+        }
+        if (!skipOwnerCheck && settings != null && settings.isOwnerProtection() && ownerUUID != null) {
             UUIDComponent uuidComp = accessor.getComponent(ref, UUIDComponent.getComponentType());
             if (uuidComp != null) {
                 UUID playerUuid = uuidComp.getUuid();
@@ -163,7 +182,21 @@ public class GravestoneBlockState extends ItemContainerState
 
     @Override
     public boolean canDestroy(Ref<EntityStore> ref, ComponentAccessor<EntityStore> accessor) {
-        if (settings != null && settings.isOwnerProtection() && ownerUUID != null) {
+        boolean skipOwnerCheck = false;
+        if (accessChecker != null && ownerUUID != null) {
+            UUIDComponent uuidComp = accessor.getComponent(ref, UUIDComponent.getComponentType());
+            if (uuidComp != null) {
+                UUID playerUuid = uuidComp.getUuid();
+                var blockPos = getBlockPosition();
+                var chunk = getChunk();
+                String worldName = chunk != null && chunk.getWorld() != null ? chunk.getWorld().getName() : "";
+                GravestoneAccessChecker.AccessResult result = accessChecker.canAccess(
+                        playerUuid, ownerUUID, blockPos.getX(), blockPos.getY(), blockPos.getZ(), worldName);
+                if (result == GravestoneAccessChecker.AccessResult.DENY) return false;
+                if (result == GravestoneAccessChecker.AccessResult.ALLOW) skipOwnerCheck = true;
+            }
+        }
+        if (!skipOwnerCheck && settings != null && settings.isOwnerProtection() && ownerUUID != null) {
             UUIDComponent uuidComp = accessor.getComponent(ref, UUIDComponent.getComponentType());
             if (uuidComp != null) {
                 UUID playerUuid = uuidComp.getUuid();
